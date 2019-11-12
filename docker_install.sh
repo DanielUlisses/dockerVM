@@ -1,34 +1,37 @@
-#!/bin/bash
+#!/bin/sh
 
-###	This file should be run in SUDO mode
+set -eu
 
-### The script file needs to be executable, i.e.
-#	chmod +x script.sh
+# Docker
+sudo apt remove --yes docker docker-engine docker.io \
+    && sudo apt update \
+    && sudo apt --yes --no-install-recommends install \
+        apt-transport-https \
+        ca-certificates \
+    && wget --quiet --output-document=- https://download.docker.com/linux/ubuntu/gpg \
+        | sudo apt-key add - \
+    && sudo add-apt-repository \
+        "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/ubuntu \
+        $(lsb_release --codename --short) \
+        stable" \
+    && sudo apt update \
+    && sudo apt --yes --no-install-recommends install docker-ce \
+    && sudo usermod --append --groups docker "$USER" \
+    && sudo systemctl enable docker \
+    && printf '\nDocker installed successfully\n\n'
 
-#	Update package index
-apt-get update
+printf 'Waiting for Docker to start...\n\n'
+sleep 3
 
-#	Install tools
-apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    software-properties-common
-
-#	Add Docker's official GPG key
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-
-#	Setup stable repo
-add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-   $(lsb_release -cs) \
-   stable"
-
-#	Update package index (again)
-apt-get update
-
-#	Install latest version of Docker CE
-apt-get install docker-ce -y
+# Docker Compose
+sudo wget \
+        --output-document=/usr/local/bin/docker-compose \
+        https://github.com/docker/compose/releases/download/1.24.0/run.sh \
+    && sudo chmod +x /usr/local/bin/docker-compose \
+    && sudo wget \
+        --output-document=/etc/bash_completion.d/docker-compose \
+        "https://raw.githubusercontent.com/docker/compose/$(docker-compose version --short)/contrib/completion/bash/docker-compose" \
+    && printf '\nDocker Compose installed successfully\n\n'
 
 #	Run Hello World HTTP for test
 docker run --rm -it -p 80:80 strm/helloworld-http
